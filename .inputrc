@@ -1,0 +1,9 @@
+"\e[1;5C": forward-word   # ctrl + right
+"\e[1;5D": backward-word  # ctrl + left
+"\e[A": history-search-backward # up key
+"\e[B": history-previous-history # down key
+"\e\e": kill-whole-line # double escape - can't use single escape
+"\e[Z": menu-complete-backward # shift-tab
+"\c_": unix-word-rubout 
+"\e[3;5~"  kill-word
+set completion-ignore-case on
