@@ -1,0 +1,111 @@
+7zfm() {
+    shexec 7zfm "$@"
+}
+brave() {
+    shexec brave "$@"
+}
+chrome() {
+    shexec chrome "$@"
+}
+ddm() {
+    shexec ddm "$@"
+}
+devenv() {
+    shexec devenv "$@"
+}
+excel() {
+    shexec excel "$@"
+}
+firefox() {
+    shexec firefox "$@"
+}
+foxitpdfreader() {
+    shexec foxitpdfreader "$@"
+}
+iediag() {
+    shexec iediag "$@"
+}
+iediagcmd() {
+    shexec iediagcmd "$@"
+}
+iexplore() {
+    shexec iexplore "$@"
+}
+inkscape() {
+    shexec inkscape "$@"
+}
+licensemanagershellext() {
+    shexec licensemanagershellext "$@"
+}
+mplayer2() {
+    shexec mplayer2 "$@"
+}
+msaccess() {
+    shexec msaccess "$@"
+}
+msedge() {
+    shexec msedge "$@"
+}
+msoadfsb() {
+    shexec msoadfsb "$@"
+}
+msoasb() {
+    shexec msoasb "$@"
+}
+msoxmled() {
+    shexec msoxmled "$@"
+}
+mspub() {
+    shexec mspub "$@"
+}
+notepad++() {
+    shexec notepad++ "$@"
+}
+onenote() {
+    shexec onenote "$@"
+}
+outlook() {
+    shexec outlook "$@"
+}
+paintdotnet() {
+    shexec paintdotnet "$@"
+}
+powerpnt() {
+    shexec powerpnt "$@"
+}
+powershell() {
+    shexec powershell "$@"
+}
+sdxhelper() {
+    shexec sdxhelper "$@"
+}
+skypeserver() {
+    shexec skypeserver "$@"
+}
+tabtip() {
+    shexec tabtip "$@"
+}
+vlc() {
+    shexec vlc "$@"
+}
+wab() {
+    shexec wab "$@"
+}
+wabmig() {
+    shexec wabmig "$@"
+}
+winmerge() {
+    shexec winmerge "$@"
+}
+winmergeu() {
+    shexec winmergeu "$@"
+}
+winword() {
+    shexec winword "$@"
+}
+wireshark() {
+    shexec wireshark "$@"
+}
+wmplayer() {
+    shexec wmplayer "$@"
+}

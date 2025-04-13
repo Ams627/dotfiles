@@ -1,173 +1,71 @@
-np() {
- (/c/program\ files/notepad++/notepad++.exe $* &)
-}
-
-squash () {
-    regexnum='^[0-9]+$'
-    if ! [[ $1 =~ $regexnum ]]; then
-        echo "error: Please specify a number of commits to squash" 1>&2
-        return 1
-    fi
-    if [[ $1 -eq 0 ]]; then
-        echo "error: cannot squash zero commits" 1>&2
-        return 1
-    fi
-    if [[ $1 -eq 1 ]]; then
-        echo "error: cannot squash a single commit" 1>&2
-        return 1
-    fi
-    messageCommit=$(($1-1))
-    message=$(git show -s --format=%s HEAD~$messageCommit)
-    echo using commmit message: $message
-    git reset --soft HEAD~$1 && git commit -m "$message"
-}
-
-subjects() {
-    git log --pretty=format:"%h %an %s" --max-count=$1
-}
-
-# go to the root dir of a git repo
-root() {
-    curr=$PWD
-    while :
-    do
-        if [[ -d ".git" ]]; then
-            break
+aa() {
+    if [[ ${1::2} == "-r" ]] || [[ ${1::2} == "-d" ]] || [[ ${1::2} == "-m" ]] || [[ ${1::2} == "-t" ]]; then
+        ada $*
+        unalias -a
+        . ~/.dir-aliases
+        . ~/.aliases
+    else
+        if [[ -n $(type -t $1) ]]; then
+            echo already an alias, command or function
+        else
+            ada -a $1
+            unalias -a
+            . ~/.dir-aliases
+            . ~/.aliases
         fi
-        if [[ -f ".git" ]]; then
-            break
-        fi
-        if [[ $PWD = / ]]; then
-            break
-        fi
-        cd ..
-    done
-    
-    if [[ $PWD = / ]]; then
-        cd $curr
     fi
-    sln
 }
 
 ccd() {
-    regexnum='^[0-9]+$'
-    if [[ $1 =~ $regexnum ]]; then
-        cwd=$PWD
-        root
-        if [[ -f ".ccd/last" ]]; then
-            count=0
-            while IFS=$'\n\r' read -r line; do
-                if [[ count == $1 ]]; then
-                    cd $line
-                    echo > ~/.ccd/bashmonitor/bashes/$$
-                    return 0
-                fi
-                ((count++))
-            done < ".ccd/last"
-        else 
-            echo "Please run ccd i or ccd -i first"
-            return -1
-        fi
-    fi
-    r=$(cchangedirectory $*)
-    read -r firstline <<< $r
-    if [[ firstline =~ '^#!cd ([.+])' ]] ; then
-        echo > ~/.ccd/bashmonitor/bashes/$$
-        cd ${BASH_REMATCH[1]}
-        return 0
-    fi
-    echo "$r"
+	if [[ -d $1 ]]; then
+		cd $1;
+	elif [[ -f $1 ]]; then
+		DIR = "$(dirname $1)"
+		cd $DIR
+	else
+		echo 1
+		tmpFile='/c/temp/ccd.txt'
+		echo 2
+		cchangeDirectory $* >$tmpFile
+		echo 3
+		read -r firstLine <$tmpFile
+		if [[ "$firstLine" =~ ^#cd ]]; then
+			dir=${firstLine:5}
+			dirWithoutCR=${dir::-1} #remove windows CR
+			cd $dirWithoutCR
+		else
+			cat $tmpFile
+		fi
+	fi
 }
 
-
-read2() {
-while IFS=$'\n\r' read -r line; do 
-echo $line
-done < $1
+gcurr() {
+	git branch --show-current
 }
 
-
-psl() {
-ps | while read -r line; do 
-    read -ra arr <<< "$line"
-    echo ${arr[1]} ${arr[3]}
-done
-}
-
-sln() {
-    orig=$PWD
-    while ! compgen -G *.sln >/dev/null 2>&1
-    do
-        if [[ "$PWD" == "/" ]] ; then 
-            cd $orig
-            break;
-        fi
-        cd ..
-    done
-}
-
-dnp() {
-    cwd=$PWD
-    echo $cwd
-    root
-    dotnet publish --nologo
-    echo $cwd
-    cd $cwd
-}
-
-dn() {
-    orig=$PWD
-    root
-    dotnet build --nologo
-    cd $orig
-}
-
-dbg() {
-    sln
-    filename=$(compgen -G *.sln)
-    filename="${filename%.*}"
-    cd $filename/bin/Debug
-}
-
-pub() {
-    sln
-    filename=$(compgen -G *.sln)
-    filename="${filename%.*}"
-    cd $filename/bin/win-x64/publish
-}
-
-gup() {
-    git add -u && git commit -mupdates && git push
-}
-
-down() {
-    cd ~/downloads
+cdt() {
+	cd $(cdtrue)
 }
 
 sa() {
-    asubst a
+	asubst a .
 }
 
 sb() {
-    asubst b
+	asubst b .
 }
 
-
 sx() {
-    asubst x
+	asubst x .
 }
 
 sy() {
-    asubst y
+	asubst y .
 }
 
 sz() {
-    asubst z
+	asubst z .
 }
-
-
-
-
 
 ta() {
     cd $(asubst -t a)
@@ -189,69 +87,66 @@ tz() {
     cd $(asubst -t z)
 }
 
-dx() {
-    cd ~/downloads && asubst x && cd -
+ff() {
+	find . -iname $*
 }
-
-dy() {
-    cd ~/downloads && asubst y && cd -
-}
-
-dz() {
-    cd ~/downloads && asubst z && cd -
-}
-
-
-aa() {
-    if [[ ${1::2} == "-r" ]] || [[ ${1::2} == "-m" ]] || [[ ${1::2} == "-l" ]] || [[ ${1::2} == "-t" ]];
-    then
-        ada $*
-        unalias -a
-        . ~/.dir-aliases
-        . ~/.aliases
-    elif [[ $(type -t $1) ]]; then
-        echo already an alias, function or command;
-    else
-        ada -a $1
-        unalias -a
-        . ~/.dir-aliases
-        . ~/.aliases
-    fi
-}
-
-nkill() {
-    pskill notepad++
-}
-
-
-pww() {
-    wdir=$(pwd -W)
-    echo -n ${wdir////\\} >/dev/clipboard
-}
-
-gcurr() {
-    git branch --show-current
-}
-
 
 mc() {
-    mkdir $1 && cd $1
+    md $1 && cd $1
+}
+
+mca() {
+    md $1 && cd $1 && sa
+}
+
+mcb() {
+    md $1 && cd $1 && sb
 }
 
 mcx() {
-    mkdir $1
-    cd $1
-    sx
+    md $1 && cd $1 && sx
 }
 
 mcy() {
-    mkdir $1
-    cd $1
-    sy
+    md $1 && cd $1 && sy
 }
 
 mcz() {
-    mkdir $1
-    cd $1
-    sz
+    md $1 && cd $1 && sz
+}
+
+ckill() {
+    pskill chrome
+}
+
+bkill() {
+    pskill brave
+}
+
+root() {
+    local root
+    root=$(git rev-parse --show-toplevel 2>/dev/null)
+    echo $root
+    if [[ -n "$root" ]]; then
+        cd "$root" || return
+        return
+    fi
+  # Not in a Git repo — look upward for a .sln file
+  local dir=$PWD
+  while [[ "$dir" != "/" ]]; do
+    for file in "$dir"/*.sln; do
+      [[ -e "$file" ]] && cd "$dir" && return
+    done
+    dir=${dir%/*}  # Move up a directory without dirname
+  done
+}
+
+pww() {
+    local winath
+    winpath=$(pwd -W)
+    echo -n "${winpath//\//\\}" > /dev/clipboard
+}
+
+pg() {
+    pslist | grep -i $1
 }

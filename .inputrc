@@ -1,9 +1,19 @@
-"\e[1;5C": forward-word   # ctrl + right
-"\e[1;5D": backward-word  # ctrl + left
-"\e[A": history-search-backward # up key
-"\e[B": history-previous-history # down key
-"\e\e": kill-whole-line # double escape - can't use single escape
-"\e[Z": menu-complete-backward # shift-tab
-"\c_": unix-word-rubout 
-"\e[3;5~"  kill-word
-set completion-ignore-case on
+set completion-ignore-case On
+
+"\e[A": history-search-backward
+"\e[B": history-search-forward
+
+"\e[1;5C": forward-word
+"\e[1;5D": backward-word
+
+TAB:menu-complete
+
+# shift-tab for going backwards in the list of files:
+"\e[Z": menu-complete-backward
+
+"\e[3;5~": shell-kill-word
+"\e[3;5~": shell-backward-kill-word
+
+"\C-H": shell-backward-kill-word
+
+"\e\e": kill-whole-line

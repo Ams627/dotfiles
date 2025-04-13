@@ -1,15 +1,11 @@
-winfile=$(</proc/$$/winpid).proc
-echo  $(</proc/$PPID/winpid) >$TMP/bashbranch/$winfile
-set +x
-shopt -s globstar
-bind 'TAB:menu-complete'
-PS1='\[\033[01;32m\]$PWD> \[\033[0m\]'
+PS1='\[\033[33m\]\w>\[\033[00m\] '
+echo reading aliases
 . ~/.aliases
+echo read aliases
 . ~/.dir-aliases
 . ~/.functions
+. ~/.exec-functions
 shopt -s nocaseglob
+shopt -s globstar
 complete -d cd
-shopt -s cdspell
-shopt -s nocaseglob
-title() { echo -ne "\e]0;$1\a"; }
-export TITLEPREFIX="Git Bash"
+HISTCONTROL=ignoreboth
