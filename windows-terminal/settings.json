@@ -69,13 +69,8 @@
         },
         {
           "id": "selectAllAndCopy",
-          "keys": ["ctrl+shift+a"],
-          "commands": [
-            { "command": "selectAll" },
-            { "command": "copy", "singleLine": false }
-          ]
+          "keys": "ctrl+shift+a",
         }
-
     ],
     "newTabMenu": 
     [
