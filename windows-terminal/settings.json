@@ -35,11 +35,20 @@
         {
             "command": "find",
             "id": "User.find"
+        },
+        {
+          "id": "selectAllAndCopy",
+          "keys": ["ctrl+shift+a"],
+          "commands": [
+            { "command": "selectAll" },
+            { "command": "copy", "singleLine": false }
+          ]
         }
     ],
     "copyFormatting": "none",
     "copyOnSelect": true,
     "defaultProfile": "{2470abab-6114-4a1c-a634-22f9ac063af0}",
+    "initialRows": 32,
     "keybindings": 
     [
         {
@@ -66,6 +75,14 @@
             "id": "User.splitPane.A6751878",
             "keys": "alt+shift+d"
         }
+        {
+          "id": "selectAllAndCopy",
+          "keys": ["ctrl+shift+a"],
+          "commands": [
+            { "command": "selectAll" },
+            { "command": "copy", "singleLine": false }
+          ]
+        }
     ],
     "newTabMenu": 
     [
@@ -82,7 +99,8 @@
                 "commandline": "%SystemRoot%\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
                 "guid": "{61c54bbd-c2c6-5271-96e7-009a87ff44bf}",
                 "hidden": false,
-                "name": "Windows PowerShell"
+                "name": "Windows PowerShell",
+                "suppressApplicationTitle": false,
             },
             {
                 "commandline": "%SystemRoot%\\System32\\cmd.exe",
@@ -130,5 +148,6 @@
     },
     "schemes": [],
     "themes": [],
+    "windowingBehavior": "useAnyExisting",
     "wordDelimiters": "\\\"$'()*;<>[\\]^{|}"
 }

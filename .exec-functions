@@ -73,9 +73,6 @@ paintdotnet() {
 powerpnt() {
     shexec powerpnt "$@"
 }
-powershell() {
-    shexec powershell "$@"
-}
 sdxhelper() {
     shexec sdxhelper "$@"
 }

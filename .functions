@@ -150,3 +150,26 @@ pww() {
 pg() {
     pslist | grep -i $1
 }
+
+gup() {
+    git add -u && git commit -m"updates" && git push
+}
+
+gist() {
+  local filename="${1:-clipboard.txt}"
+  local desc="${2:-"Public gist from clipboard"}"
+  cat /dev/clipboard >/c/temp/clip.txt
+  gh gist create /c/temp/clip.txt -f "$filename" -d "$desc" --public
+}
+
+pipex() {
+    powershell -ExecutionPolicy Bypass -File /r/ps1/pipex.ps1 $1
+}
+
+monswt() {
+    /c/bin/monswt.com "$@"
+}
+
+set_tab_color() {
+    printf '\033]6;1;tab-color;%s\a' "$1"
+}
