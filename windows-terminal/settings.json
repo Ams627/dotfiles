@@ -24,6 +24,10 @@
             "id": "User.paste"
         },
         {
+            "command": "find",
+            "id": "User.find"
+        },
+        {
             "command": 
             {
                 "action": "splitPane",
@@ -33,9 +37,16 @@
             "id": "User.splitPane.A6751878"
         },
         {
-            "command": "find",
-            "id": "User.find"
-        }
+          "name": "selectAllAndCopy",
+          "commands": [
+            "selectAll",
+            {
+              "action": "copy",
+              "singleLine": false
+            }
+       ]
+    }
+
     ],
     "copyFormatting": "none",
     "copyOnSelect": true,
@@ -56,24 +67,16 @@
             "keys": "ctrl+c"
         },
         {
-            "id": "User.paste",
-            "keys": "ctrl+v"
-        },
-        {
             "id": "User.find",
             "keys": "ctrl+shift+f"
         },
         {
-            "id": "User.splitPane.A6751878",
-            "keys": "alt+shift+d"
+            "id": "User.paste",
+            "keys": "ctrl+v"
         },
         {
-            "id": "selectAllAndCopy",
-            "keys": ["ctrl+shift+a"],
-            "commands": [
-                { "command": "selectAll" },
-                { "command": "copy", "singleLine": false }
-              ]
+            "id": "User.splitPane.A6751878",
+            "keys": "alt+shift+d"
         }
     ],
     "newTabMenu": 

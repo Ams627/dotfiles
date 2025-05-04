@@ -173,3 +173,13 @@ monswt() {
 set_tab_color() {
     printf '\033]6;1;tab-color;%s\a' "$1"
 }
+
+nuse() {
+    drive='\\'$1'\d$'
+    printargs $drive
+    net use $drive
+}
+
+rescan() {
+    ssh adrian@stoaty 'sudo /usr/sbin/minidlnad -R'
+}
