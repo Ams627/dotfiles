@@ -183,3 +183,61 @@ nuse() {
 rescan() {
     ssh adrian@stoaty 'sudo /usr/sbin/minidlnad -R'
 }
+
+enotes() {
+    np /r/notes.txt
+}
+
+dnp() {
+    dotnet publish
+}
+
+
+dbg() {
+    local dir="$PWD"
+    local sln=""
+    local solutionRoot=""
+
+    # Step 1: Walk up to find the .sln file
+    while [[ "$dir" != "/" ]]; do
+        for f in "$dir"/*.sln; do
+            [[ -e "$f" ]] && sln="$f" && solutionRoot="$dir" && break 2
+        done
+        dir="${dir%/*}"
+    done
+
+    if [[ -z "$sln" ]]; then
+        echo "No solution (.sln) file found."
+        return 1
+    fi
+
+    # Step 2: Try to find the project directory under the solution
+    local csproj=""
+    while IFS= read -r line; do
+        [[ "$line" == *".csproj"* ]] || continue
+        csproj="${line##*/}"         # just the filename
+        csproj="${csproj%.csproj}"   # strip extension
+        break
+    done < "$sln"
+
+    if [[ -z "$csproj" ]]; then
+        echo "Could not determine project name from solution."
+        return 1
+    fi
+
+    # Step 3: Assemble artifacts path
+    local framework="net8.0"  # you can adjust or guess this
+    local config="Debug"
+    local path="$solutionRoot/artifacts/bin/$csproj/$config/$framework/publish"
+
+    if [[ -d "$path" ]]; then
+        cd "$path" || return 1
+    else
+        echo "Publish output not found at: $path"
+        return 1
+    fi
+}
+
+grv() {
+    git remote -v
+}
