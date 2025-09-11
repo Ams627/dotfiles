@@ -19,3 +19,4 @@ alias ll='ls -l'
 alias cdada='cd ~/appdata/roaming'
 alias cdtemp='cd ~/appdata/local/temp'
 alias h=history
+alias tabchar='printf "\u21E5\n"'

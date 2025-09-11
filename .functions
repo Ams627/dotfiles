@@ -241,3 +241,93 @@ dbg() {
 grv() {
     git remote -v
 }
+
+printcr() {
+    printf '\u21B5\n'
+}
+
+push() {
+    gh repo create "$(basename "$PWD")" --source=. --public --push --confirm
+}
+
+gistimg () {
+    local filename="${1:-clipboard.png}"
+    local desc="${2:-Public image gist from clipboard}"
+
+    powershell.exe -Command "
+      Add-Type -AssemblyName System.Windows.Forms
+      \$img = [Windows.Forms.Clipboard]::GetImage()
+      if (\$img) {
+        \$img.Save('C:\\temp\\clip.png', 'Png')
+      } else {
+        Write-Error 'No image in clipboard'
+      }
+    "
+
+    # Check if the image was saved
+    if [ -f /c/temp/clip.png ]; then
+        gh gist create /c/temp/clip.png -f "$filename" -d "$desc" --public
+    else
+        echo "❌ No image found in clipboard."
+    fi
+}
+
+fdiff() {
+  git log --pretty=format:'%H%x00%an' |
+  awk -F $'\0' '
+    NR==1 { author=$2 }
+    $2 != author { exit }
+    { print $1 }
+  ' |
+  while read -r commit; do
+    git diff-tree --no-commit-id --name-only -r "$commit"
+  done | sort -u
+}
+
+mobo() {
+wmic baseboard get product,manufacturer,version,serialnumber
+
+}
+
+my_function() {
+  local files
+  files=$(find . -name "*.txt")
+
+  if [[ -z "$files" ]]; then
+    echo "No .txt files found."
+    return 1  # or just return
+  fi
+
+  echo "Found files:"
+  echo "$files"
+}
+
+dbrm() {
+    find /r/temp/dbp-testing -type d -iname artifacts -exec rm -rf {} +
+    find /r/temp/dbp-testing -type f -iname project.assets.json -delete
+}
+
+fpa() {
+    find /r/temp/dbp-testing -type f -iname project.assets.json
+}
+
+gist2 () {
+    if [[ $# -eq 0 ]]; then
+        # No args: use clipboard
+        local filename="clipboard.txt"
+        local desc="Public gist from clipboard"
+        cat /dev/clipboard > /c/temp/clip.txt
+        gh gist create /c/temp/clip.txt -f "$filename" -d "$desc" --public
+    else
+        # For each file passed as argument
+        for file in "$@"; do
+            if [[ -f "$file" ]]; then
+                local fname="$(basename "$file")"
+                gh gist create "$file" -f "$fname" -d "$fname" --public
+            else
+                echo "Warning: '$file' is not a file"
+            fi
+        done
+    fi
+}
+

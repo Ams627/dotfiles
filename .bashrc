@@ -9,3 +9,4 @@ shopt -s nocaseglob
 shopt -s globstar
 complete -d cd
 HISTCONTROL=ignoreboth
+export LANG=en_UK.UTF-8

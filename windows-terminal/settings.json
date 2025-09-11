@@ -24,10 +24,6 @@
             "id": "User.paste"
         },
         {
-            "command": "find",
-            "id": "User.find"
-        },
-        {
             "command": 
             {
                 "action": "splitPane",
@@ -37,16 +33,20 @@
             "id": "User.splitPane.A6751878"
         },
         {
-          "name": "selectAllAndCopy",
-          "commands": [
-            "selectAll",
-            {
-              "action": "copy",
-              "singleLine": false
-            }
-       ]
-    }
-
+            "command": "find",
+            "id": "User.find"
+        },
+        {
+            "commands": 
+            [
+                "selectAll",
+                {
+                    "action": "copy",
+                    "singleLine": false
+                }
+            ],
+            "name": "selectAllAndCopy"
+        }
     ],
     "copyFormatting": "none",
     "copyOnSelect": true,
@@ -67,12 +67,12 @@
             "keys": "ctrl+c"
         },
         {
-            "id": "User.find",
-            "keys": "ctrl+shift+f"
-        },
-        {
             "id": "User.paste",
             "keys": "ctrl+v"
+        },
+        {
+            "id": "User.find",
+            "keys": "ctrl+shift+f"
         },
         {
             "id": "User.splitPane.A6751878",
@@ -138,6 +138,18 @@
                 "hidden": false,
                 "name": "Git-bash",
                 "startingDirectory": "%USERPROFILE%"
+            },
+            {
+                "guid": "{6250d468-37e6-50d7-b181-fa53929d1295}",
+                "hidden": false,
+                "name": "Developer Command Prompt for VS 18 [Preview]",
+                "source": "Windows.Terminal.VisualStudio"
+            },
+            {
+                "guid": "{ad6a714d-a765-59be-81a7-73353ffddf28}",
+                "hidden": false,
+                "name": "Developer PowerShell for VS 18 [Preview]",
+                "source": "Windows.Terminal.VisualStudio"
             }
         ]
     },
