@@ -20,7 +20,7 @@ ccd() {
 	if [[ -d $1 ]]; then
 		cd $1;
 	elif [[ -f $1 ]]; then
-		DIR = "$(dirname $1)"
+		local DIR="$(dirname $1)"
 		cd $DIR
 	else
 		echo 1
@@ -145,6 +145,10 @@ pww() {
     local winath
     winpath=$(pwd -W)
     echo -n "${winpath//\//\\}" > /dev/clipboard
+}
+
+pwdd() {
+    echo $PWD >/dev/clipboard
 }
 
 pg() {
@@ -272,6 +276,93 @@ gistimg () {
     fi
 }
 
+
+gist-image()
+{
+    local temp_dir png_windows gist_url gist_id github_user
+
+    temp_dir=$(mktemp -d) || return 1
+
+    png_windows=$(cygpath -w "$temp_dir/clipboard.png") || {
+        rm -rf "$temp_dir"
+        return 1
+    }
+
+    CLIPBOARD_PNG="$png_windows" powershell.exe -NoProfile -STA -Command '
+        Add-Type -AssemblyName System.Windows.Forms
+        Add-Type -AssemblyName System.Drawing
+
+        $image = [Windows.Forms.Clipboard]::GetImage()
+
+        if ($null -eq $image) {
+            Write-Error "The clipboard does not contain an image."
+            exit 2
+        }
+
+        try {
+            $image.Save(
+                $env:CLIPBOARD_PNG,
+                [Drawing.Imaging.ImageFormat]::Png
+            )
+        }
+        finally {
+            $image.Dispose()
+        }
+    '
+
+    if [[ $? -ne 0 ]]; then
+        rm -rf "$temp_dir"
+        return 1
+    fi
+
+    gist_url=$(
+        printf '%s\n' '# Clipboard image' |
+            gh gist create \
+                --public \
+                --desc "Clipboard image" \
+                --filename README.md -
+    ) || {
+        rm -rf "$temp_dir"
+        return 1
+    }
+
+    gist_id=${gist_url##*/}
+    github_user=$(gh api user --jq .login) || {
+        rm -rf "$temp_dir"
+        return 1
+    }
+
+    gh gist clone "$gist_id" "$temp_dir/gist" || {
+        rm -rf "$temp_dir"
+        return 1
+    }
+
+    cp "$temp_dir/clipboard.png" "$temp_dir/gist/clipboard.png"
+
+    printf '# Clipboard image\n\n![Clipboard image](https://gist.githubusercontent.com/%s/%s/raw/clipboard.png)\n' \
+        "$github_user" "$gist_id" \
+        > "$temp_dir/gist/README.md"
+
+    (
+        cd "$temp_dir/gist" &&
+        git add README.md clipboard.png &&
+        git commit -m "Add clipboard image" &&
+        git push
+    ) || {
+        rm -rf "$temp_dir"
+        return 1
+    }
+
+    printf '%s' "$gist_url" | clip.exe
+    rm -rf "$temp_dir"
+
+    printf 'Created: %s\n' "$gist_url"
+    printf 'The URL has been copied to the clipboard.\n'
+}
+
+
+
+
 fdiff() {
   git log --pretty=format:'%H%x00%an' |
   awk -F $'\0' '
@@ -331,3 +422,438 @@ gist2 () {
     fi
 }
 
+
+# Usage:
+#   gist_screenshot /path/to/image.png                # creates a new secret gist with the image + README.md
+#   gist_screenshot /path/to/image.png GIST_ID        # adds image to existing gist and updates README.md
+#
+# Requires: gh (GitHub CLI) logged in: gh auth login
+gist_screenshot() {
+  saveclip clipboard.png
+
+  local img="clipboard.png
+  "
+  if [[ ! -f "$img" ]]; then
+    echo "File not found: $img" >&2
+    return 2
+  fi
+  local gist_id="${2:-}"
+  local img_name; img_name="$(basename "$img")"
+  local alt_text="${img_name%.*}"
+
+  # figure out your GitHub username (for building raw URL)
+  local gh_user
+  gh_user="$(gh api user -q .login)"
+
+  # Helper: build a raw URL that auto-redirects to latest revision
+  # Format: https://gist.githubusercontent.com/<user>/<gist_id>/raw/<filename>
+  build_raw_url() {
+    local gid="$1"; local fname="$2"
+    echo "https://gist.githubusercontent.com/${gh_user}/${gid}/raw/${fname}"
+  }
+
+  # Create or update the gist
+  if [[ -z "$gist_id" ]]; then
+    # Create a new secret gist with the image and a README.md that embeds it
+    local tmp_md; tmp_md="$(mktemp)"
+    cat > "$tmp_md" <<EOF
+# Screenshot
+
+![${alt_text}](${img_name})
+EOF
+    # Create gist (secret by default). Capture the URL.
+    local gist_url
+    gist_url="$(gh gist create "$tmp_md" "$img" --desc "Screenshot: ${img_name}" --public=true)"
+    gist_id="${gist_url##*/}"  # last path segment is the gist ID
+    echo "Created gist: $gist_url"
+
+    # Now rewrite README.md to point to the raw URL (stable across revisions)
+    local raw_url; raw_url="$(build_raw_url "$gist_id" "$img_name")"
+    local tmp_md2; tmp_md2="$(mktemp)"
+    cat > "$tmp_md2" <<EOF
+# Screenshot
+
+![${alt_text}](${raw_url})
+EOF
+    gh gist edit "$gist_id" "$tmp_md2" -f README.md >/dev/null
+    rm -f "$tmp_md" "$tmp_md2"
+
+  else
+    # Add the image to an existing gist and update/append README.md
+    echo "Updating gist: https://gist.github.com/${gist_id}"
+    gh gist edit "$gist_id" "$img" -f "$img_name" >/dev/null
+
+    # Try to fetch README.md (if present)
+    local readme_tmp; readme_tmp="$(mktemp)"
+    if gh api "gists/${gist_id}" -q '.files."README.md".raw_url' >/dev/null 2>&1; then
+      local readme_url
+      readme_url="$(gh api "gists/${gist_id}" -q '.files."README.md".raw_url')"
+      curl -fsSL "$readme_url" -o "$readme_tmp"
+    else
+      echo "# Screenshots" > "$readme_tmp"
+    fi
+
+    # Append the new embedded image using its raw URL
+    local raw_url; raw_url="$(build_raw_url "$gist_id" "$img_name")"
+    {
+      echo
+      echo "## ${alt_text}"
+      echo
+      echo "![${alt_text}](${raw_url})"
+    } >> "$readme_tmp"
+
+    gh gist edit "$gist_id" "$readme_tmp" -f README.md >/dev/null
+    rm -f "$readme_tmp"
+  fi
+
+  # Print the Markdown snippet and copy to clipboard if available
+  local final_url; final_url="$(build_raw_url "$gist_id" "$img_name")"
+  local snippet="![${alt_text}](${final_url})"
+  echo
+  echo "Markdown snippet (copied to clipboard if available):"
+  echo "$snippet"
+
+  if command -v pbcopy >/dev/null 2>&1; then
+    printf "%s" "$snippet" | pbcopy
+  elif command -v xclip >/dev/null 2>&1; then
+    printf "%s" "$snippet" | xclip -selection clipboard
+  elif command -v wl-copy >/dev/null 2>&1; then
+    printf "%s" "$snippet" | wl-copy
+  fi
+
+  echo
+  echo "Gist page: https://gist.github.com/${gist_id}"
+}
+
+gff() {
+    local s="$1"
+
+    # check if string contains a wildcard
+    if [[ "$s" == *[\*\?\[]* ]]; then
+        # already a pattern
+        git ls-files -- ":(icase,glob)**/$s"
+    else
+        # plain string, search as substring
+        git ls-files -- ":(icase,glob)**/*$s*"
+    fi
+}
+
+gfff() {
+    local s="$1"
+    local pattern
+
+    if [[ "$s" == *[\*\?\[]* ]]; then
+        pattern=":(icase,glob)**/$s"
+    else
+        pattern=":(icase,glob)**/*$s*"
+    fi
+
+    for f in $(git ls-files -- "$pattern"); do
+        echo "${f##*/}"
+    done
+}
+
+netscan(){
+    nmap -sn 192.168.50.0/24
+}
+
+
+pwg() {
+    local dir="$PWD"
+    local root="/"
+
+    while [[ "$dir" != "$root" ]]; do
+        if [[ -e "$dir/.git" ]]; then
+            local rel="${PWD#$dir/}"
+            if [[ "$rel" == "$PWD" ]]; then
+                printf ".\n"
+            else
+                printf "%s\n" "$rel"
+            fi
+            return
+        fi
+        dir="$(dirname "$dir")"
+    done
+
+    printf "%s\n" "$PWD"
+}
+
+
+ffstreams()
+{
+    if [ "$#" -eq 0 ]; then
+        echo "Usage: ffstreams <file> [file ...]"
+        return 1
+    fi
+
+    for file in "$@"; do
+        echo "=== $file ==="
+
+        ffprobe -v error \
+            -show_entries stream=index,codec_type,codec_name,width,height,channels:stream_tags=language,title \
+            -of compact=p=0:nk=1 \
+            "$file"
+
+        echo
+    done
+}
+
+ffcopy()
+{
+    if [ "$#" -ne 2 ]; then
+        echo "Usage: ffcopy <input-file> <output-file>"
+        return 1
+    fi
+
+    local input="$1"
+    local output="$2"
+
+    if [ ! -f "$input" ]; then
+        echo "ffcopy: input file not found: $input"
+        return 1
+    fi
+
+    ffmpeg -i "$input" \
+        -map 0 \
+        -map_metadata 0 \
+        -map_chapters 0 \
+        -c copy \
+        "$output"
+}
+
+ratio()
+{
+    if [ "$#" -ne 1 ]; then
+        echo "Usage: ratio <video-file>"
+        return 1
+    fi
+
+    local file="$1"
+
+    if [ ! -f "$file" ]; then
+        echo "ratio: file not found: $file"
+        return 1
+    fi
+
+    local dar
+
+    dar=$(ffprobe -v error \
+                  -select_streams v:0 \
+                  -show_entries stream=display_aspect_ratio \
+                  -of default=nw=1:nk=1 \
+                  "$file")
+
+    if [ -n "$dar" ] && [ "$dar" != "N/A" ]; then
+        echo "$dar"
+        return 0
+    fi
+
+    ffprobe -v error \
+            -select_streams v:0 \
+            -show_entries stream=width,height \
+            -of csv=p=0:s=x \
+            "$file"
+}
+
+
+fiobalance() {
+    local token="3jEgq9WrnOW7bpapTf3TN7uzyiwQYFluaNHHm8MUFXfCvGir323rkHvYZycFrYGN"
+
+    curl -s \
+    "https://fioapi.fio.cz/v1/rest/periods/$token/$(date +%F)/$(date +%F)/transactions.json" |
+    jq -r '.accountStatement.info.closingBalance'
+}
+
+fiotx() {
+    local token="3jEgq9WrnOW7bpapTf3TN7uzyiwQYFluaNHHm8MUFXfCvGir323rkHvYZycFrYGN"
+    local from="${1:-$(date -d '7 days ago' +%F)}"
+    local to="${2:-$(date +%F)}"
+
+    echo curl -s "https://fioapi.fio.cz/v1/rest/periods/$token/$from/$to/transactions.json"
+
+    curl -s "https://fioapi.fio.cz/v1/rest/periods/$token/$from/$to/transactions.json" | \
+    jq -r '
+        .accountStatement.transactionList.transaction[]
+        | [
+            .column0.value[0:10],
+            (.column1.value | tostring),
+            (.column8.value // ""),
+            (
+                .column16.value //
+                .column25.value //
+                .column10.value //
+                ""
+            )
+        ]
+        | @tsv
+    ' |
+    column -t -s $'\t'
+}
+
+
+stacc()
+{
+    local TOKEN="eyJhbGciOiJQUzI1NiIsInppcCI6IkdaSVAifQ.H4sIAAAAAAAA_2VSy47bMAz8lcLn5cIP-ZXb3voD_QCKpBJhbcmQ5KCLov9eJXaySXrzkJwZDq0_hY2xOBS42PeYMEzWHTW6z3fyc_FWxFXnZoOstUgHVTcIqBIRkKQHxmGoG9XJ0PR5WH4vxUGNTdf1narat8JiKg5VP1RlWQ-XAhL51aWffmIJvyxnbal7VrVpoSXTgBraHjTqDlBa1VWjqpirrJ38p7idIVpRZXogYgRVS5mHR4ZRUJFUdadozIyc6INIYvxmlaUaQXrU2WdsYCgFodWDHlrsyrLhS2Dyi-TxGR1jkkMQ5B8poItIyXq3FYKQ2CXFDREG3r6QOWTHHWxhYbIxPVdO1_yQ750EruL2W5vWmPwsYUNRUpoE1uVJYQMLfsHkCacNzpIw74wHyjDJ3c2yuGSNvUlmmgjYGY_yQhS2aW__Fzku-ZdvnxondDdA3hkbZrxMgjdgVsf7Aa755mwOFM97iU7C6yQM2ebS2st4zu8uwtHfwhjJM_lB-fDAfrmfw3lfAlNCOn3rLcEbOz2FfLTY0pn7je97LmwebnTvOs5U8IFvDFzTyQcbL2Wbu2fL623zlyXT17IJFX__ATHzkwtsAwAA.Zx_k7K_zjep0U6HfC87bCi7s1MdwF6MS58m-3Gpnf8Q-E_Rxlwi52rW-3DuJfsvOV9jJsMkNyMyUWR1F76GZwVFPshtCF_Txx5-98JYViYDRf1VVwnT0kHBbu02zX9mFYewKSs-G5vCHc7UEqaOj5uuBTzaUce62PYDM2OSmWnlT9d87dv4kwWXdojSKcXDK43wyMldo5aeh7CUFoAfa9CTrPrKRIuxVWreeOmK11PX9gbFEeGT79vE7RWhuaUusOLAyqSNQkwpXgB2DRNanOAj7O7VjtMKGdvCnbK52fkoa6CgfsQ-ZdGUVSBxQ6sIt5T79mMCmwVBewSS9snWl6QJFB-MeysvKlvTXQB2QM7S9y8WkH7gcXXzJDUYpEYXNW4skjNUwciFgnrejGZV6zfggB-mkugOAhnlv7Cx_1RKbhtFvk7mjfElra1I64IgAwmaay_zbiXIu8auG9lEh9vmaquQiX3jhpOxLQXx0WUWYla5v9dAmoCqsI4ijbXyBp73-xKK-FlMJL1pIoQX2Znffe1nXyge7QOJOxUKYxv7W_MzRMktdlYlZjey11fNg64tZawjNe3J710NR__oI5PN3xI90PT-HawlwsVKDFHjC8zKTcNs4pawkSitWFqJP0ZOO_mZrNRbgjwBpPm2kCKOK5S8L4aPmcDXRscmVR7E"
+
+    curl -s \
+      -H "Authorization: Bearer $TOKEN" \
+      https://api.starlingbank.com/api/v2/accounts
+}
+
+stbal() {
+    local TOKEN="eyJhbGciOiJQUzI1NiIsInppcCI6IkdaSVAifQ.H4sIAAAAAAAA_2VSy47bMAz8lcLn5cIP-ZXb3voD_QCKpBJhbcmQ5KCLov9eJXaySXrzkJwZDq0_hY2xOBS42PeYMEzWHTW6z3fyc_FWxFXnZoOstUgHVTcIqBIRkKQHxmGoG9XJ0PR5WH4vxUGNTdf1narat8JiKg5VP1RlWQ-XAhL51aWffmIJvyxnbal7VrVpoSXTgBraHjTqDlBa1VWjqpirrJ38p7idIVpRZXogYgRVS5mHR4ZRUJFUdadozIyc6INIYvxmlaUaQXrU2WdsYCgFodWDHlrsyrLhS2Dyi-TxGR1jkkMQ5B8poItIyXq3FYKQ2CXFDREG3r6QOWTHHWxhYbIxPVdO1_yQ750EruL2W5vWmPwsYUNRUpoE1uVJYQMLfsHkCacNzpIw74wHyjDJ3c2yuGSNvUlmmgjYGY_yQhS2aW__Fzku-ZdvnxondDdA3hkbZrxMgjdgVsf7Aa755mwOFM97iU7C6yQM2ebS2st4zu8uwtHfwhjJM_lB-fDAfrmfw3lfAlNCOn3rLcEbOz2FfLTY0pn7je97LmwebnTvOs5U8IFvDFzTyQcbL2Wbu2fL623zlyXT17IJFX__ATHzkwtsAwAA.Zx_k7K_zjep0U6HfC87bCi7s1MdwF6MS58m-3Gpnf8Q-E_Rxlwi52rW-3DuJfsvOV9jJsMkNyMyUWR1F76GZwVFPshtCF_Txx5-98JYViYDRf1VVwnT0kHBbu02zX9mFYewKSs-G5vCHc7UEqaOj5uuBTzaUce62PYDM2OSmWnlT9d87dv4kwWXdojSKcXDK43wyMldo5aeh7CUFoAfa9CTrPrKRIuxVWreeOmK11PX9gbFEeGT79vE7RWhuaUusOLAyqSNQkwpXgB2DRNanOAj7O7VjtMKGdvCnbK52fkoa6CgfsQ-ZdGUVSBxQ6sIt5T79mMCmwVBewSS9snWl6QJFB-MeysvKlvTXQB2QM7S9y8WkH7gcXXzJDUYpEYXNW4skjNUwciFgnrejGZV6zfggB-mkugOAhnlv7Cx_1RKbhtFvk7mjfElra1I64IgAwmaay_zbiXIu8auG9lEh9vmaquQiX3jhpOxLQXx0WUWYla5v9dAmoCqsI4ijbXyBp73-xKK-FlMJL1pIoQX2Znffe1nXyge7QOJOxUKYxv7W_MzRMktdlYlZjey11fNg64tZawjNe3J710NR__oI5PN3xI90PT-HawlwsVKDFHjC8zKTcNs4pawkSitWFqJP0ZOO_mZrNRbgjwBpPm2kCKOK5S8L4aPmcDXRscmVR7E"
+    local gbpAccountUID="e27d68c6-0bfe-4309-8e22-fbc10aaf5969"
+    local eurAccountUID="e2cc1b46-285a-4fe6-8ad2-257cae96a673"
+
+    curl -s -H "Authorization: Bearer $TOKEN" \
+        "https://api.starlingbank.com/api/v2/accounts/$gbpAccountUID/balance" |
+    jq -r '
+        .clearedBalance as $b |
+        "\($b.currency) \(($b.minorUnits / 100) | tostring)"
+    '
+
+    curl -s -H "Authorization: Bearer $TOKEN" \
+        "https://api.starlingbank.com/api/v2/accounts/$eurAccountUID/balance" |
+    jq -r '
+        .clearedBalance as $b |
+        "\($b.currency) \(($b.minorUnits / 100) | tostring)"
+    '
+}
+
+wbal() {
+    local TOKEN=1b5f5128-53ca-46e3-9856-74c96da2b1a9
+    local PROFILE_ID=8371770
+    curl -s "https://api.wise.com/v1/borderless-accounts?profileId=$PROFILE_ID" \
+      -H "Authorization: Bearer $TOKEN" |
+    jq -r '.[0].balances[]
+           | select(.balanceType=="AVAILABLE")
+           | "\(.currency)\t\(.amount.value)"'
+}
+
+rates()
+{
+    local token="1b5f5128-53ca-46e3-9856-74c96da2b1a9"
+
+    local gbp=$(curl -s -H "Authorization: Bearer $token" \
+        "https://api.wise.com/v1/rates?source=GBP")
+
+    local eur=$(curl -s -H "Authorization: Bearer $token" \
+        "https://api.wise.com/v1/rates?source=EUR")
+
+    printf "%-8s %12.6f\n" "GBP/USD" "$(jq -r '.[]|select(.target=="USD")|.rate' <<<"$gbp")"
+    printf "%-8s %12.6f\n" "GBP/EUR" "$(jq -r '.[]|select(.target=="EUR")|.rate' <<<"$gbp")"
+    printf "%-8s %12.6f\n" "GBP/CZK" "$(jq -r '.[]|select(.target=="CZK")|.rate' <<<"$gbp")"
+    printf "%-8s %12.6f\n" "EUR/CZK" "$(jq -r '.[]|select(.target=="CZK")|.rate' <<<"$eur")"
+    printf "%-8s %12.6f\n" "EUR/USD" "$(jq -r '.[]|select(.target=="USD")|.rate' <<<"$eur")"
+}
+
+f() {
+    local path dir
+
+    IFS= read -r -d '' path < /dev/clipboard || :
+    [[ -n $path ]] || return 0
+
+    # Remove Windows carriage returns and convert \ to /.
+    path=${path//$'\r'/}
+    path=${path//\\//}
+
+    # Remove surrounding quotes, if present.
+    if [[ $path == \"*\" ]]; then
+        path=${path:1:${#path}-2}
+    fi
+
+    if [[ -d $path ]]; then
+        builtin cd -- "$path"
+    elif [[ -f $path ]]; then
+        dir=${path%/*}
+
+        # Handle a filename in the current directory or directly under /.
+        [[ $dir == "$path" ]] && dir=.
+        [[ -n $dir ]] || dir=/
+
+        builtin cd -- "$dir"
+    fi
+}
+
+CheckIndex() {
+    git diff --cached --quiet
+    local status=$?
+
+    if (( status == 1 )); then
+        echo "Index contains staged changes"
+    fi
+
+    return "$status"
+}
+
+commitstaged()
+{
+    local status message
+
+    # Check whether anything is staged.
+    git diff --cached --quiet --
+    status=$?
+
+    case $status in
+        0) return 0 ;;          # Nothing staged: do nothing.
+        1) ;;                   # Staged changes exist.
+        *) return "$status" ;;  # Git error.
+    esac
+
+    if git rev-parse --verify HEAD >/dev/null 2>&1; then
+        message="updates"
+    else
+        message="first commit"
+    fi
+
+    git commit -m "$message"
+}
+
+cdf()
+{
+    local pattern=$1
+    local -a matches
+
+    mapfile -d '' matches < <(
+        find . -mindepth 1 -iname "$pattern" -print0 2>/dev/null
+    )
+
+    case ${#matches[@]} in
+        0)
+            echo "No matches: $pattern" >&2
+            return 1
+            ;;
+        1)
+            printf '%s\n' "${matches[0]##*/}"
+            if [[ -d ${matches[0]} ]]; then
+                cd -- "${matches[0]}"
+            else
+                cd -- "${matches[0]%/*}"
+            fi
+            ;;
+        *)
+            printf 'Multiple matches:\n'
+            printf '  %q\n' "${matches[@]}"
+            return 2
+            ;;
+    esac
+}
+
+dx() {
+    asubst x $HOME/Downloads
+}
+
+dy() {
+    asubst x $HOME/Downloads
+}
+
+dz() {
+    asubst x $HOME/Downloads
+}
+
+dpush() {
+    cp %LOCALAPPDATA%/Packages/Microsoft.WindowsTerminal_8wekyb3d8bbwe/LocalState/settings.json ./windows-terminal
+    git add -u
+    git commit -m"Updates to dotfiles"
+    git push
+}

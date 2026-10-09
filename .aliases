@@ -20,3 +20,5 @@ alias cdada='cd ~/appdata/roaming'
 alias cdtemp='cd ~/appdata/local/temp'
 alias h=history
 alias tabchar='printf "\u21E5\n"'
+alias shot=gist_screenshot
+alias ren=mv

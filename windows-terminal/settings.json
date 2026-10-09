@@ -1,4 +1,4 @@
-{
+aaa{
     "$help": "https://aka.ms/terminal-documentation",
     "$schema": "https://aka.ms/terminal-profiles-schema",
     "actions": 
@@ -50,7 +50,7 @@
     ],
     "copyFormatting": "none",
     "copyOnSelect": true,
-    "defaultProfile": "{2470abab-6114-4a1c-a634-22f9ac063af0}",
+    "defaultProfile": "{b453ae62-4e3d-5e58-b989-0a998ec441b8}",
     "initialRows": 32,
     "keybindings": 
     [
@@ -91,53 +91,20 @@
         "list": 
         [
             {
-                "commandline": "%SystemRoot%\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
-                "guid": "{61c54bbd-c2c6-5271-96e7-009a87ff44bf}",
-                "hidden": false,
-                "name": "Windows PowerShell",
-                "suppressApplicationTitle": false
-            },
-            {
-                "commandline": "%SystemRoot%\\System32\\cmd.exe",
-                "guid": "{0caa0dad-35be-5f56-a8ff-afceeeaa6101}",
-                "hidden": false,
-                "name": "Command Prompt"
-            },
-            {
                 "guid": "{b453ae62-4e3d-5e58-b989-0a998ec441b8}",
                 "hidden": false,
                 "name": "Azure Cloud Shell",
                 "source": "Windows.Terminal.Azure"
             },
             {
-                "guid": "{212b6dbd-fe9a-5580-8e76-f381a3c5af8a}",
+                "guid": "{61c54bbd-c2c6-5271-96e7-009a87ff44bf}",
                 "hidden": false,
-                "name": "Developer Command Prompt for VS 2022",
-                "source": "Windows.Terminal.VisualStudio"
+                "name": "Windows PowerShell"
             },
             {
-                "guid": "{f5e1afc1-b8d6-5ccc-93dd-bca16124ed31}",
+                "guid": "{0caa0dad-35be-5f56-a8ff-afceeeaa6101}",
                 "hidden": false,
-                "name": "Developer PowerShell for VS 2022",
-                "source": "Windows.Terminal.VisualStudio"
-            },
-            {
-                "guid": "{16208362-94fc-5b1f-a491-5b2624d5ab56}",
-                "hidden": true,
-                "name": "Visual Studio Debug Console",
-                "source": "VSDebugConsole"
-            },
-            {
-                "commandline": "C:\\Program Files\\Git\\bin\\bash.exe",
-                "font": 
-                {
-                    "face": "Cascadia Code",
-                    "size": 20
-                },
-                "guid": "{2470abab-6114-4a1c-a634-22f9ac063af0}",
-                "hidden": false,
-                "name": "Git-bash",
-                "startingDirectory": "%USERPROFILE%"
+                "name": "Command Prompt"
             },
             {
                 "guid": "{6250d468-37e6-50d7-b181-fa53929d1295}",
