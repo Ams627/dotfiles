@@ -852,7 +852,7 @@ dz() {
 }
 
 dpush() {
-    cp %LOCALAPPDATA%/Packages/Microsoft.WindowsTerminal_8wekyb3d8bbwe/LocalState/settings.json ./windows-terminal
+    cp $LOCALAPPDATA/Packages/Microsoft.WindowsTerminal_8wekyb3d8bbwe/LocalState/settings.json ./windows-terminal
     git add -u
     git commit -m"Updates to dotfiles"
     git push
